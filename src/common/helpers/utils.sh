@@ -121,6 +121,11 @@ function get_nginx_conf_dir() {
 }
 
 # Export key/value pairs from a simple env file (KEY=VALUE lines).
+# NOTE: Values must have surrounding quotes stripped before export. When users
+# quote values containing special characters (e.g. a DATABASE_URI with query
+# parameters such as ssl_ca=...), the literal quote characters end up in the
+# exported variable and are passed to the DB driver, causing it to reject the
+# string as invalid. Stripping them here ensures the clean value is exported.
 function export_env_file() {
 	local env_file=$1
 	[ -f "$env_file" ] || return 0
@@ -128,6 +133,9 @@ function export_env_file() {
 		[[ -z "$key" || "$key" =~ ^# ]] && continue
 		key=$(echo "$key" | xargs)
 		[[ -z "$key" ]] && continue
+		# Strip optional surrounding single or double quotes from the value.
+		value="${value#\"}" ; value="${value%\"}"
+		value="${value#\'}" ; value="${value%\'}"
 		export "$key=$value"
 	done < "$env_file"
 }

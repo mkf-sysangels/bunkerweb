@@ -152,12 +152,19 @@ function start() {
     env_file="/etc/bunkerweb/variables.env"
 
     # Load variables safely
+    # NOTE: Strip surrounding quotes from values after reading. When users quote
+    # values containing special characters (e.g. DATABASE_URI with ssl_ca=...),
+    # the literal quote characters are included in the read value and must be
+    # removed before use, otherwise the DB driver rejects the string as invalid.
     if [ -f "$env_file" ]; then
         while IFS='=' read -r key value; do
             # Skip empty lines and comments
             [[ -z "$key" || "$key" =~ ^# ]] && continue
             # Trim whitespace from key
             key=$(echo "$key" | xargs)
+            # Strip optional surrounding quotes from value
+            value="${value#\"}" ; value="${value%\"}"
+            value="${value#\'}" ; value="${value%\'}"
             # Only process recognized keys
             if [[ -n "${defaults[$key]}" ]]; then
                 # Set variable if defined and non-empty in the file

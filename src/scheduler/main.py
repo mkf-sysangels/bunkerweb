@@ -683,7 +683,17 @@ if __name__ == "__main__":
         dotenv_env = {}
         if tmp_variables_path.is_file():
             with tmp_variables_path.open() as f:
-                dotenv_env = dict(line.strip().split("=", 1) for line in f if line.strip() and not line.startswith("#") and "=" in line)
+                dotenv_env = {}
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    k, v = line.split("=", 1)
+                    # Strip optional surrounding quotes — values containing special
+                    # characters (e.g. URIs with query parameters such as ssl_ca=...)
+                    # are often quoted in env files; the quotes must not reach the DB driver.
+                    v = v.strip("\"'")
+                    dotenv_env[k] = v
 
         SCHEDULER = JobScheduler(LOGGER, db=Database(LOGGER, sqlalchemy_string=dotenv_env.get("DATABASE_URI", getenv("DATABASE_URI", None))))  # type: ignore
 
